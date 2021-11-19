@@ -70,21 +70,7 @@ namespace engine {
         return static_cast<sf_count_t >(buffer->pos);
     }
 
-    static Audio readAudio(const std::string &buf) {
-        SF_VIRTUAL_IO virtio;
-        virtio.get_filelen = &sf_vio_get_filelen;
-        virtio.seek = &sf_vio_seek;
-        virtio.read = &sf_vio_read;
-        virtio.write = &sf_vio_write;
-        virtio.tell = &sf_vio_tell;
-
-        LibSndBuffer buffer{buf, 0};
-        SF_INFO sfinfo;
-        SNDFILE *sndfile = sf_open_virtual(&virtio, SFM_READ, &sfinfo, &buffer);
-        if (!sndfile) {
-            throw std::runtime_error("Failed to open audio buffer");
-        }
-
+    static Audio processSndFile(SNDFILE *sndfile, const SF_INFO &sfinfo) {
         if (sfinfo.frames<1
                           || sfinfo.frames>(sf_count_t)(std::numeric_limits<int>::max() / sizeof(short)) /
             sfinfo.channels) {
@@ -141,13 +127,43 @@ namespace engine {
         return ret;
     }
 
-    std::string readBuffer(const std::string &path) {
-        std::ifstream stream(path);
-        return {(std::istreambuf_iterator<char>(stream)), std::istreambuf_iterator<char>()};
+    static Audio readAudio(const std::string &buf) {
+        SF_VIRTUAL_IO virtio;
+        virtio.get_filelen = &sf_vio_get_filelen;
+        virtio.seek = &sf_vio_seek;
+        virtio.read = &sf_vio_read;
+        virtio.write = &sf_vio_write;
+        virtio.tell = &sf_vio_tell;
+
+        LibSndBuffer buffer{buf, 0};
+        SF_INFO sfinfo;
+        SNDFILE *sndfile = sf_open_virtual(&virtio, SFM_READ, &sfinfo, &buffer);
+        if (!sndfile) {
+            auto err = sf_strerror(sndfile);
+            throw std::runtime_error("Failed to open audio buffer\nError:" + std::string(err));
+        }
+        return processSndFile(sndfile, sfinfo);
+    }
+
+    static Audio readAudioFile(const std::string &path) {
+        SF_INFO sfinfo;
+        SNDFILE *sndfile = sf_open(path.c_str(), SFM_READ, &sfinfo);
+        if (!sndfile) {
+            auto err = sf_strerror(sndfile);
+            throw std::runtime_error("Failed to open audio file at " + path + "\nError: " + std::string(err));
+        }
+        return processSndFile(sndfile, sfinfo);
     }
 
     std::unique_ptr<AudioBuffer> loadAudioBuffer(const std::string &path, AudioContext &context) {
-        auto audio = readAudio(readBuffer(path));
+        auto audio = readAudioFile(path);
+        auto ret = context.createBuffer();
+        ret->upload(audio.buffer, audio.format, audio.frequency);
+        return std::move(ret);
+    }
+
+    std::unique_ptr<AudioBuffer> loadAudioBufferData(const std::string &data, AudioContext &context) {
+        auto audio = readAudio(data);
         auto ret = context.createBuffer();
         ret->upload(audio.buffer, audio.format, audio.frequency);
         return std::move(ret);

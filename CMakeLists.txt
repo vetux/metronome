@@ -26,5 +26,3 @@ target_link_libraries(metronome Qt5::Core Qt5::Widgets Threads::Threads sndfile 
 
 target_include_directories(metronome PUBLIC include/)
 target_include_directories(metronome PUBLIC src/)
-
-file(COPY samples DESTINATION ${CMAKE_CURRENT_BINARY_DIR})

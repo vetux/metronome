@@ -27,6 +27,8 @@
 
 namespace engine {
     std::unique_ptr<AudioBuffer> loadAudioBuffer(const std::string &path, AudioContext &context);
+
+    std::unique_ptr<AudioBuffer> loadAudioBufferData(const std::string &data, AudioContext &context);
 }
 
 #endif //METRONOME_AUDIOLOADER_HPP

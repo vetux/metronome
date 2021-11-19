@@ -61,8 +61,12 @@ public:
             sourceIndex = 0;
 
         source->stop();
-        source->setBuffer(*audioSample);
         source->play();
+    }
+
+    void stop() {
+        for (auto &source: audioSources)
+            source->stop();
     }
 
     void setSamplePath(const std::string &path) {
@@ -72,6 +76,21 @@ public:
         }
         sourceIndex = 0;
         audioSample = engine::loadAudioBuffer(path, *audioContext);
+        for (auto &source: audioSources) {
+            source->setBuffer(*audioSample);
+        }
+    }
+
+    void setSampleData(const std::string &data) {
+        for (auto &source: audioSources) {
+            source->stop();
+            source->clearBuffer();
+        }
+        sourceIndex = 0;
+        audioSample = engine::loadAudioBufferData(data, *audioContext);
+        for (auto &source: audioSources) {
+            source->setBuffer(*audioSample);
+        }
     }
 
 private:

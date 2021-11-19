@@ -52,6 +52,12 @@ public:
         beatGenerator.reset();
     }
 
+    void setSampleData(const std::string &data) {
+        std::lock_guard<std::mutex> guard(mutex);
+        samplePlayer.setSampleData(data);
+        beatGenerator.reset();
+    }
+
     void setBPM(int bpm) {
         std::lock_guard<std::mutex> guard(mutex);
         beatGenerator.setBPM(bpm);
@@ -67,6 +73,7 @@ public:
     void stop() {
         std::lock_guard<std::mutex> guard(mutex);
         playing = false;
+        samplePlayer.stop();
     }
 
     bool isPlaying() {
