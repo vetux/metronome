@@ -49,11 +49,13 @@ public:
     void setSamplePath(const std::string &path) {
         std::lock_guard<std::mutex> guard(mutex);
         samplePlayer.setSamplePath(path);
+        beatGenerator.reset();
     }
 
     void setBPM(int bpm) {
         std::lock_guard<std::mutex> guard(mutex);
         beatGenerator.setBPM(bpm);
+        beatGenerator.reset();
     }
 
     void start() {

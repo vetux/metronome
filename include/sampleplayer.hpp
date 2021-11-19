@@ -28,16 +28,25 @@
 
 class SamplePlayer {
 public:
-    SamplePlayer() {
+    /**
+     * @param numberOfSources The number of audio sources to create for playing back the samples. This corresponds to the maximum concurrently playing samples.
+     */
+    SamplePlayer(int numberOfSources = 10) {
         audioDevice = engine::AudioDevice::createDevice(engine::OpenAL);
         audioContext = audioDevice->createContext();
         audioContext->makeCurrent();
+        for (int i = 0; i < numberOfSources; i++) {
+            audioSources.emplace_back(audioContext->createSource());
+        }
     }
 
-    explicit SamplePlayer(const std::string &samplePath) {
+    explicit SamplePlayer(int numberOfSources, const std::string &samplePath) {
         audioDevice = engine::AudioDevice::createDevice(engine::OpenAL);
         audioContext = audioDevice->createContext();
         audioContext->makeCurrent();
+        for (int i = 0; i < numberOfSources; i++) {
+            audioSources.emplace_back(audioContext->createSource());
+        }
         setSamplePath(samplePath);
     }
 
@@ -46,36 +55,22 @@ public:
             throw std::runtime_error("No sample loaded");
         }
 
-        auto source = audioContext->createSource();
-        source->setLooping(false);
+        auto &source = audioSources.at(sourceIndex++);
+
+        if (sourceIndex >= audioSources.size())
+            sourceIndex = 0;
+
+        source->stop();
         source->setBuffer(*audioSample);
         source->play();
-
-        std::set<int> del;
-        for (auto &pair: audioSources) {
-            if (pair.second->getState() == engine::AudioSource::STOPPED) {
-                del.insert(pair.first);
-            }
-        }
-
-        for (auto &i: del)
-            audioSources.erase(i);
-
-        if (!sourceCounterCache.empty()) {
-            auto id = *sourceCounterCache.begin();
-            sourceCounterCache.erase(sourceCounterCache.begin());
-            audioSources[id] = std::move(source);
-        } else {
-            if (sourceCounter == std::numeric_limits<int>::max())
-                throw std::runtime_error("Counter overflow");
-            audioSources[sourceCounter++] = std::move(source);
-        }
     }
 
     void setSamplePath(const std::string &path) {
-        audioSources.clear();
-        sourceCounter = 0;
-        sourceCounterCache.clear();
+        for (auto &source: audioSources) {
+            source->stop();
+            source->clearBuffer();
+        }
+        sourceIndex = 0;
         audioSample = engine::loadAudioBuffer(path, *audioContext);
     }
 
@@ -83,9 +78,9 @@ private:
     std::unique_ptr<engine::AudioDevice> audioDevice;
     std::unique_ptr<engine::AudioContext> audioContext;
     std::unique_ptr<engine::AudioBuffer> audioSample;
-    int sourceCounter = 0;
-    std::set<int> sourceCounterCache;
-    std::map<int, std::unique_ptr<engine::AudioSource>> audioSources;
+
+    int sourceIndex = 0;
+    std::vector<std::unique_ptr<engine::AudioSource>> audioSources;
 };
 
 #endif //METRONOME_SAMPLEPLAYER_HPP

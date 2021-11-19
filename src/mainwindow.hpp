@@ -21,6 +21,14 @@
 #define METRONOME_MAINWINDOW_HPP
 
 #include <QMainWindow>
+#include <QPushButton>
+#include <QLabel>
+#include <QSpinBox>
+#include <QFileDialog>
+#include <QMessageBox>
+#include <QVBoxLayout>
+#include <QHBoxLayout>
+
 #include <thread>
 
 #include "metronome.hpp"
@@ -29,17 +37,58 @@ class MainWindow : public QMainWindow {
 Q_OBJECT
 public:
     MainWindow()
-            : metronome(100, "samples/default.wav") {
-        metronome.start();
+            : metronome(40, "samples/default.wav") {
+        centralWidget = new QWidget();
+        centralWidget->setLayout(new QVBoxLayout());
+        setCentralWidget(centralWidget);
+
+        controlButton = new QPushButton(this);
+        controlButton->setText("Start");
+
+        bpmSpinBox = new QSpinBox(this);
+        bpmSpinBox->setMinimum(1);
+        bpmSpinBox->setMaximum(std::numeric_limits<int>::max());
+        bpmSpinBox->setValue(40);
+
+        auto sampleWidget = new QWidget(this);
+        sampleWidget->setLayout(new QHBoxLayout());
+
+        sampleLabel = new QLabel(this);
+        sampleLabel->setText("samples/default.wav");
+
+        selectSampleButton = new QPushButton(this);
+        selectSampleButton->setText("Select Sample");
+
+        sampleWidget->layout()->addWidget(sampleLabel);
+        sampleWidget->layout()->addWidget(selectSampleButton);
+
+        connect(controlButton, SIGNAL(pressed()), this, SLOT(toggle()));
+        connect(bpmSpinBox, SIGNAL(valueChanged(int)), this, SLOT(setBPM(int)));
+        connect(selectSampleButton, SIGNAL(pressed()), this, SLOT(selectSampleButtonPressed()));
+
+        centralWidget->layout()->addWidget(controlButton);
+        centralWidget->layout()->addWidget(bpmSpinBox);
+        centralWidget->layout()->addWidget(sampleWidget);
+        centralWidget->layout()->addItem(new QSpacerItem(0, 0, QSizePolicy::Expanding, QSizePolicy::Expanding));
     }
 
 public slots:
+
+    void toggle() {
+        if (metronome.isPlaying())
+            stop();
+        else
+            start();
+    };
+
     void start() {
         metronome.start();
+        controlButton->setText("Stop");
     }
 
     void stop() {
         metronome.stop();
+        controlButton->setText("Start");
     }
 
     void setSamplePath(const std::string &filePath) {
@@ -50,8 +99,33 @@ public slots:
         metronome.setBPM(bpm);
     }
 
+    void selectSampleButtonPressed() {
+        stop();
+        auto path = QFileDialog::getOpenFileName(this, tr("Select Audio Sample"));
+        if (!path.isNull()) {
+            bool success = false;
+            try {
+                setSamplePath(path.toStdString());
+                success = true;
+            } catch (std::exception &e) {
+                QMessageBox::critical(this,
+                                      QString("Failed to open Audio Sample"),
+                                      QString(("Failed to open audio sample at " + path.toStdString() + ", Error: " +
+                                               e.what()).c_str()));
+            }
+            if (success) {
+                sampleLabel->setText(path);
+            }
+        }
+    }
+
 private:
     Metronome metronome;
+    QWidget *centralWidget;
+    QPushButton *controlButton;
+    QSpinBox *bpmSpinBox;
+    QLabel *sampleLabel;
+    QPushButton *selectSampleButton;
 };
 
 #endif //METRONOME_MAINWINDOW_HPP

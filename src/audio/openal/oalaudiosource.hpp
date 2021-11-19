@@ -106,6 +106,8 @@ namespace engine {
 
         void setBuffer(const AudioBuffer &buffer) override;
 
+        void clearBuffer() override;
+
         void queueBuffers(std::vector<std::reference_wrapper<const AudioBuffer>> buffers) override;
 
         std::vector<std::reference_wrapper<const AudioBuffer>> unqueueBuffers() override;

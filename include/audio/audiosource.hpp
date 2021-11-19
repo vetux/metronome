@@ -120,6 +120,8 @@ namespace engine {
 
         virtual void setBuffer(const AudioBuffer &buffer) = 0;
 
+        virtual void clearBuffer() = 0;
+
         virtual void queueBuffers(std::vector<std::reference_wrapper<const AudioBuffer>> buffers) = 0;
 
         virtual std::vector<std::reference_wrapper<const AudioBuffer>> unqueueBuffers() = 0;

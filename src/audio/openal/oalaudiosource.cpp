@@ -295,7 +295,13 @@ namespace engine {
         checkOALError();
     }
 
+    void OALAudioSource::clearBuffer() {
+        alSourcei(handle, AL_BUFFER, 0);
+        checkOALError();
+    }
+
     void OALAudioSource::queueBuffers(std::vector<std::reference_wrapper<const AudioBuffer>> buffers) {
+        //TODO: Queued buffers clear
         ALuint b[buffers.size()];
         for (int i = 0; i < buffers.size(); i++) {
             auto &ob = dynamic_cast<const OALAudioBuffer &>(buffers[i].get());
