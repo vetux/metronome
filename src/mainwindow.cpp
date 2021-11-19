@@ -73,7 +73,7 @@ void MainWindow::selectSampleButtonPressed() {
         } catch (std::exception &e) {
             QMessageBox::critical(this,
                                   QString("Failed to open Audio Sample"),
-                                  QString((std::string("Error: ") + e.what()).c_str()));
+                                  QString(e.what()));
         }
         if (success) {
             sampleLabel->setText(path);
