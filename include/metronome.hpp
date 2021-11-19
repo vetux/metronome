@@ -83,6 +83,7 @@ private:
             std::lock_guard<std::mutex> guard(mutex);
             if (playing)
                 beatGenerator.update();
+            //TODO: Use precise sleep instead of full polling
         }
     }
 
