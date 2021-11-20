@@ -31,7 +31,7 @@ public:
     /**
      * @param numberOfSources The number of audio sources to create for playing back the samples. This corresponds to the maximum concurrently playing samples.
      */
-    SamplePlayer(int numberOfSources = 10) {
+    SamplePlayer(int numberOfSources = 20) {
         audioDevice = engine::AudioDevice::createDevice(engine::OpenAL);
         audioContext = audioDevice->createContext();
         audioContext->makeCurrent();

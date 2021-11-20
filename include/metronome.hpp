@@ -22,20 +22,24 @@
 
 #include <thread>
 #include <functional>
+#include <condition_variable>
 
 #include "beatgenerator.hpp"
 #include "sampleplayer.hpp"
 
-class Metronome : BeatGenerator::Listener {
+class Metronome {
 public:
-    Metronome() {
-        beatGenerator.addListener(this);
+    /**
+     * @param beatInterval How many times per second should the metronome thread update the beat generator, Corresponds to the maximum bpm
+     */
+    Metronome(int beatInterval = 20)
+            : beatInterval(beatInterval) {
         //thread = std::thread(std::bind(&Metronome::loop, this, std::placeholders::_1));
         thread = std::thread([this]() { loop(); });
     }
 
-    Metronome(int bpm, const std::string &samplePath) {
-        beatGenerator.addListener(this);
+    Metronome(int beatInterval, int bpm, const std::string &samplePath)
+            : beatInterval(beatInterval) {
         beatGenerator.setBPM(bpm);
         samplePlayer.setSamplePath(samplePath);
         thread = std::thread([this]() { loop(); });
@@ -68,6 +72,7 @@ public:
         std::lock_guard<std::mutex> guard(mutex);
         beatGenerator.reset();
         playing = true;
+        playingCondition.notify_all();
     }
 
     void stop() {
@@ -80,17 +85,31 @@ public:
         return playing;
     }
 
-    void onBeat() override {
-        samplePlayer.play();
-    }
-
 private:
     void loop() {
         while (runFlag) {
-            std::lock_guard<std::mutex> guard(mutex);
-            if (playing)
-                beatGenerator.update();
-            //TODO: Use precise sleep instead of full polling
+            std::unique_lock<std::mutex> guard(mutex);
+            if (playing) {
+                //TODO: Fix drift
+                // The beat generator update includes the time any cycles between update invocations and
+                // the beat generator instructions themselves took so there should not be any drift caused by the beat generator.
+                // Most likely a problem with OpenALSoft latency as it spins another thread.
+                auto time = beatGenerator.update();
+                if (time.count() == 0) {
+                    samplePlayer.play();
+                } else {
+                    guard.unlock();
+                    std::this_thread::sleep_for(std::chrono::duration<double>(
+                            1.0f / static_cast<double>(beatInterval)));
+                }
+            } else {
+                playingCondition.wait(guard, [this] {
+                    if (playing)
+                        return true;
+                    else
+                        return false;
+                });
+            }
         }
     }
 
@@ -99,7 +118,11 @@ private:
     bool runFlag = true;
     std::thread thread;
 
+    int beatInterval;
+
     bool playing = false;
+    std::condition_variable playingCondition;
+
     BeatGenerator beatGenerator;
     SamplePlayer samplePlayer;
 };

@@ -25,33 +25,23 @@
 
 class BeatGenerator {
 public:
-    class Listener {
-    public:
-        virtual void onBeat() = 0;
-    };
-
     void reset() {
         lastUpdate = std::chrono::high_resolution_clock::now();
         accumulator = targetDuration;
     }
 
-    void update() {
+    std::chrono::high_resolution_clock::duration update() {
         auto now = std::chrono::high_resolution_clock::now();
         accumulator += now - lastUpdate;
+        std::chrono::high_resolution_clock::duration ret;
         if (accumulator >= targetDuration) {
             accumulator = std::chrono::high_resolution_clock::duration(0);
-            for (auto &listener: listeners)
-                listener->onBeat();
+            ret = std::chrono::high_resolution_clock::duration(0);
+        } else {
+            ret = targetDuration - accumulator;
         }
         lastUpdate = now;
-    }
-
-    void addListener(Listener *listener) {
-        listeners.insert(listener);
-    }
-
-    void removeListener(Listener *listener) {
-        listeners.erase(listener);
+        return ret;
     }
 
     void setBPM(uint32_t value) {
@@ -62,7 +52,6 @@ public:
 private:
     static const uint64_t NANOSECONDS_PER_MINUTE = 60000000000;
 
-    std::set<Listener *> listeners;
     std::chrono::high_resolution_clock::duration targetDuration;
     std::chrono::high_resolution_clock::time_point lastUpdate;
     std::chrono::high_resolution_clock::duration accumulator;
